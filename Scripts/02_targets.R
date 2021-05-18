@@ -5,7 +5,9 @@
 ## CREATED:  4.30.21
 ## MODIFIED: 5.11.20
 
-
+#install package tidylog, mimics dplyr/tidyr functions, printed results- tidylog::dropna, tells you how many rows are dropped
+#tidylog() tidylog::drop_na()
+#Can print out table by not assigning or surround entire thing in ()
 ##Results
 df_results <-df_raw %>%
   select(-targets, -cumulative) %>% 
@@ -41,6 +43,7 @@ df_targets <-df_raw %>%
   pivot_longer(c("targets"),
                names_to="targets",
                values_drop_na = TRUE) %>%
+  #rewrite this as results or targets = targets
   mutate(results_or_targets = replace(targets, targets %in% c("targets"), "targets"),
          targets=value) %>%
   rename("values"=value) %>%
@@ -48,6 +51,7 @@ df_targets <-df_raw %>%
   View()
 
 ##Quarterly Targets
+#May be easier way to do this? map_dfr
 
 df_targets_q1 <-df_targets %>%
   mutate(quarter=paste(fiscal_year, "Q1"),
@@ -109,92 +113,39 @@ df_rcum %>%
   View()
 
 ## NET_NEW_Targets
-## Try doing similar to quarterly targets
 
-df_nn_21<-df_raw %>% 
-  filter(indicator=="TX_CURR",
-         fiscal_year==2021) %>% 
-  mutate(indicator = replace(indicator, indicator %in% c("TX_CURR"), "TX_NET_NEW"),
-         results_or_targets="targets") %>%
-  rename("fy21_targets"=targets,
-         "fy21_cumulative"=cumulative)
-
-df_nn_20<-df_raw %>% 
-  filter(indicator=="TX_CURR",
-         fiscal_year==2020) %>% 
-  mutate(indicator = replace(indicator, indicator %in% c("TX_CURR"), "TX_NET_NEW"),
-       results_or_targets="targets") %>%
-  rename("fy20_targets"=targets,
-         "fy20_cumulative"=cumulative)
-
-df_nn_19<-df_raw %>% 
-  filter(indicator=="TX_CURR",
-         fiscal_year==2019) %>% 
-  mutate(indicator = replace(indicator, indicator %in% c("TX_CURR"), "TX_NET_NEW"),
-         results_or_targets="targets") %>%
-  rename("fy19_targets"=targets,
-         "fy19_cumulative"=cumulative)
-
-df_nn_18<-df_raw %>% 
-  filter(indicator=="TX_CURR",
-         fiscal_year==2018) %>% 
-  mutate(indicator = replace(indicator, indicator %in% c("TX_CURR"), "TX_NET_NEW"),
-         results_or_targets="targets") %>%
-  rename("fy18_targets"=targets,
-         "fy18_cumulative"=cumulative)
-
-df_nn_17<-df_raw %>% 
-  filter(indicator=="TX_CURR",
-         fiscal_year==2017) %>% 
-  mutate(indicator = replace(indicator, indicator %in% c("TX_CURR"), "TX_NET_NEW"),
-         results_or_targets="targets") %>%
-  rename("fy17_targets"=targets,
-         "fy17_cumulative"=cumulative)
-
-
-df_nn_join <- bind_rows(df_nn_21, df_nn_20, df_nn_19, df_nn_18, df_nn_17) %>%
-  mutate(fy21_nn_targets=fy21_targets-fy20_cumulative,
-         fy20_nn_targets=fy20_targets-fy19_cumulative,
-         fy19_nn_targets=fy19_targets-fy18_cumulative,
-         fy18_nn_targets=fy18_targets-fy17_cumulative) %>%
-  select(-qtr1, -qtr2, -qtr3, -qtr4, -fy21_targets, -fy20_targets, -fy19_targets, -fy18_targets, -fy17_targets,
-         -fy21_cumulative, -fy20_cumulative, -fy19_cumulative, -fy18_cumulative, -fy17_cumulative) %>% 
-  View()
-
-
-#Check
-df_nn_join %>% 
-  select(-psnuuid, -sex, -statushiv, -statustb, -statuscx, -hiv_treatment_status, -trendsfine) %>% 
-  View()
-
-
-
-df_nnt <- df_raw %>% 
+df_tx<-df_raw %>% 
   filter(indicator=="TX_CURR") %>% 
-  mutate(indicator = replace(indicator, indicator %in% c("TX_CURR"), "TX_NET_NEW"),
-         results_or_targets="targets",
-         fy21targets=ifelse(fiscal_year=="2021", targets, NA_real_),
-         fy20targets=ifelse(fiscal_year=="2020", targets, NA_real_),
-         fy19targets=ifelse(fiscal_year=="2019", targets, NA_real_),
-         fy18targets=ifelse(fiscal_year=="2018", targets, NA_real_),
-         fy20cum=ifelse(fiscal_year=="2020", cumulative, NA_real_),
-         fy19cum=ifelse(fiscal_year=="2019", cumulative, NA_real_),
-         fy18cum=ifelse(fiscal_year=="2018", cumulative, NA_real_),
-         fy17cum=ifelse(fiscal_year=="2017", cumulative, NA_real_),
-         fy21_nn_targets=fy21targets-fy20cum,
-         fy20_nn_targets=fy20targets-fy19cum,
-         fy19_nn_targets=fy19targets-fy18cum,
-         fy18_nn_targets=fy18targets-fy17cum) %>%
-  select(-source_name, -modality, -statuscx, -statustb, -statushiv, -sex, -indicatortype) %>% 
+  group_by(operatingunit, operatingunituid, countryname, snu1, snu1uid, psnu, psnuuid, snuprioritization,
+           typemilitary, dreams, primepartner, fundingagency, mech_code, mech_name, pre_rgnlztn_hq_mech_code,
+           primepartner_duns, award_number, indicator, numeratordenom, indicatortype, disaggregate, 
+           standardizeddisaggregate, categoryoptioncomboname, ageasentered, trendsfine, trendssemifine, trendscoarse,
+           sex, statushiv, hiv_treatment_status, otherdisaggregate, otherdisaggregate_sub, modality, source_name) %>%
+  mutate(nn_targets = targets - lag(cumulative, order_by = fiscal_year)) %>% 
+  ungroup() %>% 
+  select(-targets, -cumulative, -qtr1, -qtr2, -qtr3, -qtr4) %>% 
+  mutate(indicator = "TX_NET_NEW",
+         values=nn_targets,
+         results_or_targets="targets") %>% 
+  rename(targets = nn_targets) 
+
+#check
+df_nn %>% 
+  filter(standardizeddisaggregate=="Total Numerator",
+         psnu=="Juba County") %>% 
   View()
 
+#Combine output from above steps into one df
+
+
+
+
+
+
+###########################################################################
 
 #Scratch/Notes
-  
-#function grouping by vars I have, create cum sum for snapshot indicators, take original
-#df, take the old data drop old quarter data and append new one
-#For net new use lag indicator, can take from quarter before. TX_CURR target- TX_CURR q4
-#Group by PSNU, with only TX_CURR in data frame, target-lag cumulative. Default lag is one period
+
 #for local partners can use google drive api
 
 

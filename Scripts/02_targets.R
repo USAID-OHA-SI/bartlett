@@ -8,15 +8,17 @@
 #install package tidylog, mimics dplyr/tidyr functions, printed results- tidylog::dropna, tells you how many rows are dropped
 #tidylog() tidylog::drop_na()
 #Can print out table by not assigning or surround entire thing in ()
+
+
 ##Results
-df_results <-df_raw %>%
+df_results <- df_raw %>%
   select(-targets, -cumulative) %>% 
   rename("q1"=qtr1,
          "q2"=qtr2,
          "q3"=qtr3,
          "q4"=qtr4) %>%
   pivot_longer(c("q1", "q2", "q3", "q4"),
-               names_to="results",
+               names_to = "results",
                values_drop_na = TRUE) %>%
   mutate(quarter=paste(fiscal_year, results),
          results_or_targets = replace(results, results %in% c("q1", "q2", "q3", "q4"), "results"),
@@ -25,7 +27,7 @@ df_results <-df_raw %>%
   drop_na(results)
 
 ##Cumulative
-df_cumulative <-df_raw %>%
+df_cumulative <- df_raw %>%
   select(-targets, -qtr1, -qtr2, -qtr3, -qtr4) %>% 
   pivot_longer(c("cumulative"),
                names_to="cumulative",
@@ -36,7 +38,7 @@ df_cumulative <-df_raw %>%
   drop_na(cumulative)
 
 ##Targets
-df_targets <-df_raw %>%
+df_targets <- df_raw %>%
   select(-cumulative, -qtr1, -qtr2, -qtr3, -qtr4) %>% 
   pivot_longer(c("targets"),
                names_to="targets",
@@ -91,11 +93,15 @@ var_char <- df_results %>%
 
 
 df_rcum <- df_results %>%
-  mutate(indicator_nd=case_when(indicator %in% nd_ind ~ paste(indicator, numeratordenom, sep="_"), TRUE ~ indicator)) %>%
+  mutate(indicator_nd=case_when(
+    indicator %in% nd_ind ~ paste(indicator, numeratordenom, sep="_"), 
+    TRUE ~ indicator)) %>%
   group_by(dplyr::across(var_char)) %>%
   arrange(quarter, .by_group = TRUE) %>%
   mutate(running_cumulative = cumsum(values),
-                running_cumulative = ifelse(indicator_nd %in% snapshot_ind, values, running_cumulative),
+         running_cumulative = ifelse(indicator_nd %in% snapshot_ind, 
+                                     values, 
+                                     running_cumulative),
          results_or_targets="running_cumulative") %>%
   ungroup() %>%
   select(-results, -indicator_nd) %>%
@@ -104,45 +110,55 @@ df_rcum <- df_results %>%
 
 ## NET_NEW_Targets
 
-df_nn<-df_raw %>% 
+df_nn <- df_raw %>% 
   filter(indicator=="TX_CURR") %>% 
   group_by(operatingunit, operatingunituid, countryname, snu1, snu1uid, psnu, psnuuid, snuprioritization,
            typemilitary, dreams, primepartner, fundingagency, mech_code, mech_name, pre_rgnlztn_hq_mech_code,
-           primepartner_duns, award_number, indicator, numeratordenom, indicatortype, disaggregate, 
+           prime_partner_duns, award_number, indicator, numeratordenom, indicatortype, disaggregate, 
            standardizeddisaggregate, categoryoptioncomboname, ageasentered, trendsfine, trendssemifine, trendscoarse,
            sex, statushiv, hiv_treatment_status, otherdisaggregate, otherdisaggregate_sub, modality, source_name) %>%
   mutate(nn_targets = targets - lag(cumulative, order_by = fiscal_year)) %>% 
   ungroup() %>% 
   select(-targets, -cumulative, -qtr1, -qtr2, -qtr3, -qtr4) %>% 
   mutate(indicator = "TX_NET_NEW",
-         values=nn_targets,
-         results_or_targets="targets") %>% 
+         values = nn_targets,
+         results_or_targets = "targets") %>% 
   rename(targets = nn_targets) 
 
 
 #Combine output from above steps into one df
-df <- bind_rows(df_cumulative, df_results, df_targets, df_targets_q1, df_targets_q2, df_targets_q3, 
-            df_targets_q4, df_nn)
+df <- bind_rows(df_cumulative, 
+                df_results, 
+                df_targets, 
+                df_targets_q1, 
+                df_targets_q2, 
+                df_targets_q3, 
+                df_targets_q4, 
+                df_nn)
 
 #Partner type join
-df_partners <- googlesheets4::read_sheet("1tGk1TR8l3WacR8qMIK0AQvFynABijAaLHeIctE1nUoM") %>% 
+partner_sheet <- "1tGk1TR8l3WacR8qMIK0AQvFynABijAaLHeIctE1nUoM"
+
+#googledrive::drive_browse(as_id(partner_sheet))
+
+df_partners <- googlesheets4::read_sheet(as_id(partner_sheet)) %>% 
   rename("mech_code"="Mechanism ID",
          "Partner_Type"="Partner Type") %>% 
-  mutate(mech_code = as.character(mech_code)) %>% 
-  View()
+  mutate(mech_code = as.character(mech_code)) 
 
 df <- df %>% 
   left_join(df_partners, by=("mech_code")) %>% 
 
 #Field changes
 df1 <- df %>%
+  clean_agency() %>% 
   mutate(
-    fundingagency = str_replace(fundingagency, "HHS/CDC", "CDC"),
-    fundingagency = str_replace(fundingagency, "HHS/HRSA", "HRSA"),
+    #fundingagency = str_replace(fundingagency, "HHS/CDC", "CDC"),
+    #fundingagency = str_replace(fundingagency, "HHS/HRSA", "HRSA"),
     fundingagency = case_when(
       str_detect(fundingagency, "PC") ~ "Peace Corps",
-      str_detect(fundingagency, "CDC") ~ "CDC",
-      str_detect(fundingagency, "HRSA") ~ "HRSA",
+      #str_detect(fundingagency, "CDC") ~ "CDC",
+      #str_detect(fundingagency, "HRSA") ~ "HRSA",
       str_detect(fundingagency, "State") ~ "State Dept",
       TRUE ~ fundingagency),
     operatingunit = str_replace(operatingunit, "Democratic Republic of the Congo", "DRC"),
@@ -232,7 +248,9 @@ df1 <- df %>%
     "Targets (for Q. Ach)"="Targets (For Quarterly Achievement)",
     "Age VMMC"="Age Vmmc",
     "FY"="Fy",
-    "G2G"="G2g") %>% 
+    "G2G"="G2g") 
+
+df1 %>% 
   glimpse()
   View()
   

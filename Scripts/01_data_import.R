@@ -9,10 +9,11 @@ source("./Scripts/00_setup_project.R")
 #load secrets
 glamr::load_secrets()
 
-fnames <- c("^MER_.*_PSNU_IM_FY19-21_.*", 
+fnames <- c("^MER_.*_OU_IM_FY19-2.*",
+            "^MER_.*_PSNU_IM_FY19-2.*",
+            "^MER_.*_PSNU_IM_DREAMS_FY19-2.*",
             "^MER_.*_PSNU_IM_FY15-18_.*",
-            "^MER_.*_NAT_SUBNAT_FY15-21_.*")
-
+            "^MER_.*_NAT_SUBNAT_FY15-2.*")
 
 # Pano Session
 sess <- pano_session(username = pano_user(),

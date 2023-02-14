@@ -24,7 +24,10 @@
 
   dir_mer <- si_path(type = "path_msd")
   
-  dir_hypers <- paste0("MSDs-4HyprProcess-", curr_date())
+  #curr_dt <- curr_date()
+  curr_dt <- "2023-02-13"
+  
+  dir_hypers <- paste0("MSDs-4HyprProcess-", curr_dt)
   
   dir_hypers <- file.path(dir_mer, dir_hypers)
   
@@ -60,6 +63,11 @@
   url <- "https://pepfar-panorama.org/forms/downloads/"
   
 # FUNCTIONS ----
+  
+  msd_unzip <- function(.file, dest = NULL) {
+    
+    if (is.null(dest)) dest <- dirname
+  }
   
 # DATA EXTRACTION ----
   
@@ -143,4 +151,52 @@
     walk(~pano_download(item_url = .x, 
                         session = sess, 
                         dest = dir_hsites_prev))
+  
+  
+# UN-COMPRESS Files
+  
+  dir_hypers %>% 
+    dir_map(
+      path = .,
+      #fun = dirname,
+      fun = basename,
+      recurse = TRUE
+    )
+  
+  dir_hypers %>% 
+    #dir_ls(recurse = TRUE, regexp = ".zip$") %>% 
+    dir_ls(recurse = TRUE, regexp = ".*\\%20.*.zip$") %>% 
+    #dir_ls(recurse = TRUE, regexp = ".*\\%27.*.zip$") %>% 
+    walk(function(.file){
+      
+      dir_dest <- dirname(.file)
+      
+      # Remove misformatted files
+      if (stringr::str_detect(.file, ".*(\\%20|\\%27).*.txt")) {
+        .file %>% 
+          stringr::str_replace(".zip$", ".txt") %>% 
+          fs::dir_delete()
+      }
+      
+      # Rename
+      filename <- basename(.file) %>% 
+        stringr::str_replace(".zip$", ".txt") %>% 
+        stringr::str_replace_all("\\%20", " ") %>% 
+        stringr::str_replace_all("\\%27", "'")
+      
+      filename <- basename(.file) %>% 
+        stringr::str_replace_all("%20", " ") %>% 
+        stringr::str_replace_all("%27", "'")
+      
+      # Unzip
+      utils::unzip(
+        zipfile = .file,
+        files = filename,
+        overwrite = TRUE,
+        exdir = dir_dest
+      )
+      
+      print(filename)
+    })
+  
   

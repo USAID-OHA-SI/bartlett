@@ -20,14 +20,38 @@
 
 # GLOBAL PARAMS ----
 
+  # Pano Access
+  
+  user <- pano_user()
+  pass <- pano_pwd()
+  
+  sess <- pano_session(username = user, password = pass)
+  
+  url <- "https://pepfar-panorama.org/forms/downloads/"
+  
+  # Recent MSD Release 
+  
+  recent_fldr <- url %>%
+    pano_content(session = sess) %>%
+    pano_elements() %>%
+    dplyr::filter(stringr::str_detect(item, "^MER")) %>%
+    dplyr::pull(item)
+  
+  ## Identify Latest Release
+  curr_release <- stringr::str_extract(recent_fldr, "(?<=Q\\d{1}[:space:]).*")
+  curr_status <- base::ifelse(stringr::str_detect(recent_fldr, "Post|Clean"), "clean", "initial")
+  curr_fy <- stringr::str_extract(recent_fldr, "[:digit:]{4}") %>% as.numeric()
+  curr_qtr <- stringr::str_extract(recent_fldr, "(?<=Q)[:digit:]") %>% as.numeric()
+  
+  src_msds <- paste0("FY", str_sub(curr_fy, 3, 4), "Q", curr_qtr, "-", curr_release)
+
   ## Directories 
 
   dir_mer <- si_path(type = "path_msd")
   
-  #curr_dt <- curr_date()
-  curr_dt <- "2023-02-13"
+  curr_dt <- curr_date()
   
-  dir_hypers <- paste0("MSDs-4HyprProcess-", curr_dt)
+  dir_hypers <- paste0("MSDs-4HyprProcess-", src_msds)
   
   dir_hypers <- file.path(dir_mer, dir_hypers)
   
@@ -53,37 +77,14 @@
   
   #open_path(dir_hypers)
   
-  # Pano Access
-  
-  user <- pano_user()
-  pass <- pano_pwd()
-  
-  sess <- pano_session(username = user, password = pass)
-  
-  url <- "https://pepfar-panorama.org/forms/downloads/"
-  
 # FUNCTIONS ----
   
   msd_unzip <- function(.file, dest = NULL) {
     
-    if (is.null(dest)) dest <- dirname
+    if (is.null(dest)) dest <- dirname(.file)
   }
   
 # DATA EXTRACTION ----
-  
-  # Recent MSD Release 
-  
-  recent_fldr <- url %>%
-    pano_content(session = sess) %>%
-    pano_elements() %>%
-    dplyr::filter(stringr::str_detect(item, "^MER")) %>%
-    dplyr::pull(item)
-  
-  ## Identify Latest Release
-  curr_release <- stringr::str_extract(recent_fldr, "(?<=Q\\d{1}[:space:]).*")
-  curr_status <- base::ifelse(stringr::str_detect(recent_fldr, "Post|Clean"), "clean", "initial")
-  curr_fy <- stringr::str_extract(recent_fldr, "[:digit:]{4}") %>% as.numeric()
-  curr_qtr <- stringr::str_extract(recent_fldr, "(?<=Q)[:digit:]") %>% as.numeric()
   
   ## Extract Data items
   items <- pano_extract(item = "mer",
@@ -164,14 +165,12 @@
     )
   
   dir_hypers %>% 
-    #dir_ls(recurse = TRUE, regexp = ".zip$") %>% 
-    dir_ls(recurse = TRUE, regexp = ".*\\%20.*.zip$") %>% 
-    #dir_ls(recurse = TRUE, regexp = ".*\\%27.*.zip$") %>% 
+    dir_ls(recurse = TRUE, regexp = ".zip$") %>% 
     walk(function(.file){
       
       dir_dest <- dirname(.file)
       
-      # Remove misformatted files
+      # Remove mis-formatted files
       if (stringr::str_detect(.file, ".*(\\%20|\\%27).*.txt")) {
         .file %>% 
           stringr::str_replace(".zip$", ".txt") %>% 
@@ -183,10 +182,6 @@
         stringr::str_replace(".zip$", ".txt") %>% 
         stringr::str_replace_all("\\%20", " ") %>% 
         stringr::str_replace_all("\\%27", "'")
-      
-      filename <- basename(.file) %>% 
-        stringr::str_replace_all("%20", " ") %>% 
-        stringr::str_replace_all("%27", "'")
       
       # Unzip
       utils::unzip(

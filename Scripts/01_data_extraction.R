@@ -101,12 +101,13 @@
   
   items %>% 
     filter(type == "file zip_file",
-           parent == recent_fldr,
+           str_detect(parent, paste0(recent_fldr, "$|", recent_fldr, "/FY")),
            str_detect(item, ".*_NAT_SUBNAT_.*.zip$")) %>% 
     pull(path) %>% 
-    pano_download(item_url = ., 
-                  session = sess, 
-                  dest = dir_hnats)
+    walk(~pano_download(item_url = .x, 
+                        session = sess, 
+                        dest = dir_hnats,
+                        uncompress = T))
   
   ## OUs
   
@@ -117,7 +118,8 @@
     pull(path) %>%
     walk(~pano_download(item_url = .x, 
                         session = sess, 
-                        dest = dir_hous))
+                        dest = dir_hous,
+                        uncompress = T))
   
   ## PSNUs
   
@@ -128,7 +130,8 @@
     pull(path) %>%
     walk(~pano_download(item_url = .x, 
                         session = sess, 
-                        dest = dir_hpsnus))
+                        dest = dir_hpsnus,
+                        uncompress = T))
   
   
   ## Sites / Current
@@ -159,7 +162,6 @@
   dir_hypers %>% 
     dir_map(
       path = .,
-      #fun = dirname,
       fun = basename,
       recurse = TRUE
     )
@@ -183,13 +185,15 @@
         stringr::str_replace_all("\\%20", " ") %>% 
         stringr::str_replace_all("\\%27", "'")
       
-      # Unzip
-      utils::unzip(
-        zipfile = .file,
-        files = filename,
-        overwrite = TRUE,
-        exdir = dir_dest
-      )
+      if (!file.exists(file.path(dir_dest, filename))) {
+        # Unzip
+        utils::unzip(
+          zipfile = .file,
+          files = filename,
+          overwrite = TRUE,
+          exdir = dir_dest
+        )
+      }
       
       print(filename)
     })

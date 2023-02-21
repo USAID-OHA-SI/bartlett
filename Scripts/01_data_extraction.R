@@ -49,6 +49,7 @@
 
   dir_mer <- si_path(type = "path_msd")
   
+  # Get current date
   curr_dt <- curr_date()
   
   dir_hypers <- paste0("MSDs-4HyprProcess-", src_msds)

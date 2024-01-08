@@ -1,0 +1,43 @@
+---
+title: "MSD Processing Flow"
+author: "Baboyma Kagniniwa"
+date: "2/24/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Master Hyperfile Production
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Inputs
+
+The production of the master datasets (Tableau Hyperfiles) for the office wide tableau dashbaords required the historical MER Structured Datasets (MSD), the local partners reference table, and the historical change of MER Data Elements (indicator, indicator type, disaggregation, and type of aggregation). 
+
+1. MER Structured Data sets
+2. MER Data Element Change Tracker (Reporting Frequency/Summed vs. Snapshot)
+3. Local Partners List
+
+
+## Pre-processes
+
+1. Set processing parameters
+2. Extract input files from Google Drive and DATIM/Panorama ftp
+3. Generate outputs
+
+## Data Processing
+
+1. Merge MSDs (by reporting levels), add reference data, clean and export as single individual files: 4 outputs as hyper or txt files
+
+2. 
+
+

@@ -31,9 +31,8 @@
   
   # Recent MSD Release 
   
-  recent_fldr <- url %>%
-    pano_content(session = sess) %>%
-    pano_elements() %>%
+  recent_fldr <- url %>% 
+    pano_items(user, pass) %>%
     dplyr::filter(stringr::str_detect(item, "^MER")) %>%
     dplyr::pull(item)
   
@@ -52,9 +51,9 @@
   # Get current date
   curr_dt <- curr_date()
   
-  dir_hypers <- paste0("MSDs-4HyprProcess-", src_msds)
-  
-  dir_hypers <- file.path(dir_mer, dir_hypers)
+  # Set up input files structure
+  dir_hypers <- paste0("MSDs-4HyprProcess-", src_msds) %>% 
+    file.path(dir_mer, .)
   
   dir_hnats <- file.path(dir_hypers, "NATs")
   dir_hous <- file.path(dir_hypers, "OUs")
@@ -64,7 +63,10 @@
   dir_hsites_curr <- file.path(dir_hsites, "Current")
   dir_hsites_prev <- file.path(dir_hsites, "Previous")
   
+  # Create non-existant folders
+  
   if (!dir.exists(dir_hypers)) {
+    
     dir.create(dir_hypers)
     
     dir.create(dir_hnats)
@@ -87,7 +89,7 @@
   
 # DATA EXTRACTION ----
   
-  ## Extract Data items
+  ## Extract MSD file paths
   items <- pano_extract(item = "mer",
                         version = curr_status,
                         fiscal_year = curr_fy,
@@ -107,7 +109,7 @@
     pull(path) %>% 
     walk(~pano_download(item_url = .x, 
                         session = sess, 
-                        dest = dir_hnats,
+                        dest_path = dir_hnats,
                         uncompress = T))
   
   ## OUs
@@ -119,7 +121,7 @@
     pull(path) %>%
     walk(~pano_download(item_url = .x, 
                         session = sess, 
-                        dest = dir_hous,
+                        dest_path = dir_hous,
                         uncompress = T))
   
   ## PSNUs
@@ -131,9 +133,8 @@
     pull(path) %>%
     walk(~pano_download(item_url = .x, 
                         session = sess, 
-                        dest = dir_hpsnus,
+                        dest_path = dir_hpsnus,
                         uncompress = T))
-  
   
   ## Sites / Current
   
@@ -144,7 +145,7 @@
     pull(path) %>%
     walk(~pano_download(item_url = .x, 
                         session = sess, 
-                        dest = dir_hsites_curr))
+                        dest_path = dir_hsites_curr))
   
   ## Sites / Previous
   
@@ -155,18 +156,20 @@
     pull(path) %>%
     walk(~pano_download(item_url = .x, 
                         session = sess, 
-                        dest = dir_hsites_prev))
+                        dest_path = dir_hsites_prev))
   
   
 # UN-COMPRESS Files
   
+  ## check list of files
   dir_hypers %>% 
     dir_map(
       path = .,
       fun = basename,
       recurse = TRUE
-    )
+    ) %>% unlist()
   
+  # Rename and unzip files
   dir_hypers %>% 
     dir_ls(recurse = TRUE, regexp = ".zip$") %>% 
     walk(function(.file){
